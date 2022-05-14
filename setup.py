@@ -9,5 +9,4 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=["pywin32==304"],
-    entry_points={"console_scripts": ["opencsv = opencsv.main:main"]},
 )

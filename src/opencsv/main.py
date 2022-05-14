@@ -1,14 +1,31 @@
 from argparse import ArgumentParser
 import logging
+# from logging.handlers import NTEventLogHandler
 import os
 from pathlib import Path
 import pythoncom
 import subprocess
 import sys
 import time
-from winreg import HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_CLASSES_ROOT, REG_SZ, REG_NONE, REG_DWORD, CreateKey, \
-    OpenKey, EnumKey, SetValue, SetValueEx, QueryValue, DeleteKey, DeleteValue, KEY_ALL_ACCESS
+from winreg import (
+    HKEY_CURRENT_USER,
+    HKEY_LOCAL_MACHINE,
+    HKEY_CLASSES_ROOT,
+    REG_SZ,
+    REG_NONE,
+    REG_DWORD,
+    CreateKey,
+    OpenKey,
+    EnumKey,
+    SetValue,
+    SetValueEx,
+    QueryValue,
+    DeleteKey,
+    DeleteValue,
+    KEY_ALL_ACCESS,
+)
 
+EXE = sys.executable
 REG_NAME = "open_csv_utf8"
 ICON_PATH = "Excel.CSV\\DefaultIcon"
 USER_PATH = "Software\\Classes"
@@ -19,12 +36,13 @@ BOM = b"\xef\xbb\xbf"
 
 class Opener:
     def __init__(self):
-        exe = sys.executable
-        if exe.endswith("python.exe"):
-            self._program = f'{exe[:-10]}pythonw.exe "{__file__}"'
+        if EXE.endswith("python.exe"):
+            # If we exist as a python script run by a Python executable
+            self._program = f'{EXE[:-10]}pythonw.exe "{__file__}"'
             self._run_as_script = True
         else:
-            self._program = sys.argv[0]
+            # If we exist as a PyInstaller one-file .EXE
+            self._program = EXE
             self._run_as_script = False
         self._xls_assoc = None
 
@@ -45,9 +63,13 @@ class Opener:
         if not self._run_as_script:
             # copy this program to %LOCALAPPDATA%\{REG_NAME}
             from shutil import copy
+
             src = Path(self._program)
-            dst = Path(os.getenv("LOCALAPPDATA")) / REG_NAME + src.suffix
-            copy(src, dst)
+            dst = Path(os.getenv("LOCALAPPDATA")) / (REG_NAME + src.suffix)
+            try:
+                copy(src, dst)
+            except shutil.SameFileError:
+                pass
             self._program = str(dst)
         logging.debug(f"Runner command: {self._command}")
         if dry_run:
@@ -74,6 +96,7 @@ class Opener:
         if sub_key := self.excel_options_key:
             with CreateKey(HKEY_CURRENT_USER, sub_key) as k:
                 SetValueEx(k, "DefaultCPG", 0, REG_DWORD, 65001)
+        logging.debug(f"Installed to {self._program}.")
 
     def uninstall(self, dry_run: bool) -> None:
         """Remove this program as CSV file handler"""
@@ -111,6 +134,7 @@ class Opener:
         local_path = os.getenv("LOCALAPPDATA")
         if not self._run_as_script and self._program.startswith(local_path):
             Path(self._program).unlink(missing_ok=True)
+        logging.debug("Uninstalled.")
 
     @property
     def _command(self):
@@ -125,11 +149,12 @@ class Opener:
             assoc_command = get_registry_value(key)
             if not assoc_command:
                 raise OSError("Could not find Excel instance!")
-            elif assoc_command[0] == "\"":
-                end = assoc_command.find("\"", 1)
+            elif assoc_command[0] == '"':
+                end = assoc_command.find('"', 1)
                 self._xls_assoc = assoc_command[1:end]
             else:
                 self._xls_assoc = assoc_command
+            logging.debug(f"Identified Excel association command as {self._xls_assoc}.")
         return self._xls_assoc
 
     @property
@@ -164,29 +189,29 @@ class Opener:
     def launch(self, file: Path) -> None:
         """Open CSV file with Excel and confirm it has opened"""
         command = self.excel_association
-        logging.debug(f"Opening: {command} \"{file}\"")
+        logging.debug(f'Opening: {command} "{file}"')
         # launch Excel opening our file, and attempt to strip BOM from file after Excel exits
         subprocess.Popen(f'{command} "{file}"')
-        self._await_launch(file)
+        await_excel_open(file)
         logging.debug(f"{file} is open in Excel!")
         # once open, wait for it to close and strip the BOM
         strip_bom(file)
 
-    @staticmethod
-    def _await_launch(file: Path) -> None:
-        """Using pywin32, search Running Object Table for Excel with current file open"""
-        filename = file.name
-        timeout = time.time() + 30
-        while True:
-            context = pythoncom.CreateBindCtx(0)
-            for moniker in pythoncom.GetRunningObjectTable():
-                name = moniker.GetDisplayName(context, None)
-                if name.endswith(filename):
-                    time.sleep(0.5)
-                    return
-            if time.time() > timeout:
-                raise TimeoutError(f"Timeout waiting for Excel to open {filename}.")
-            time.sleep(0.5)
+
+def await_excel_open(file: Path) -> None:
+    """Using pywin32, search Running Object Table for Excel with current file open"""
+    filename = file.name
+    timeout = time.time() + 30
+    while True:
+        context = pythoncom.CreateBindCtx(0)
+        for moniker in pythoncom.GetRunningObjectTable():
+            name = moniker.GetDisplayName(context, None)
+            if name.endswith(filename):
+                time.sleep(0.5)
+                return
+        if time.time() > timeout:
+            raise TimeoutError(f"Timeout waiting for Excel to open {filename}.")
+        time.sleep(0.5)
 
 
 def get_registry_value(key: str) -> str:
@@ -217,6 +242,7 @@ def prepend(file: Path) -> None:
             dst.write(data)
     original.unlink(missing_ok=True)
     os.utime(file, (original_stat.st_atime, original_stat.st_mtime))
+    logging.debug(f"Added BOM to {file}.")
 
 
 def strip_bom(file: Path):
@@ -261,8 +287,9 @@ def strip_bom(file: Path):
 
 def main() -> None:
     """Set up CLI arguments and options"""
-    log_file = Path(__file__).with_name("opencsv.log")
-    logging.basicConfig(filename=log_file, encoding='utf-8', level=logging.DEBUG)
+    log_file = Path(EXE).with_name("opencsv.log")
+    logging.basicConfig(filename=log_file, encoding="utf-8", level=logging.WARNING)
+    logging.debug(f"Call: {sys.argv}")
     parser = ArgumentParser(epilog="Thank you for using OpenCSV!")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("file", help="open this CSV file", type=Path, nargs="?")
@@ -272,5 +299,5 @@ def main() -> None:
     opener(args.file, args.uninstall)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
