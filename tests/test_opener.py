@@ -1,4 +1,4 @@
-from utf8csv import main
+from utf8csv import main, modify_file, registry
 from pathlib import Path
 import pytest
 import sys
@@ -21,8 +21,7 @@ def test_excel_association():
 
 
 def test_options_key():
-    obj = main.Opener()
-    key = obj.excel_options_key
+    key = registry.excel_options_key()
     assert isinstance(key, str)
 
 
@@ -46,7 +45,7 @@ def test_strip():
     with TemporaryDirectory() as temp:
         source = Path(temp) / "sample.csv"
         source.write_bytes(sample_with_prefix)
-        main.strip_bom(file=source)
+        modify_file.strip_bom(file=source)
         result = source.read_bytes()
         assert result == sample_without_prefix
 
@@ -55,7 +54,7 @@ def test_prepend():
     with TemporaryDirectory() as temp:
         source = Path(temp) / "sample.csv"
         source.write_bytes(sample_without_prefix)
-        main.prepend(file=source)
+        modify_file.prepend(file=source)
         result = source.read_bytes()
         assert result == sample_with_prefix
 
