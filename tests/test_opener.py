@@ -1,4 +1,4 @@
-from opencsv import main
+from utf8csv import main
 from pathlib import Path
 import pytest
 import sys
@@ -67,4 +67,4 @@ def test_cli_help(capsys):
     capture = capsys.readouterr()
     assert exit_obj.type == SystemExit and exit_obj.value.code == 0
     assert not capture.err
-    assert capture.out.endswith("Thank you for using OpenCSV!\n")
+    assert capture.out.endswith("Thank you for using utf8csv!\n")

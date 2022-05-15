@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 import logging
-# from logging.handlers import NTEventLogHandler
 import os
 from pathlib import Path
 import pythoncom
@@ -26,7 +25,7 @@ from winreg import (
 )
 
 EXE = sys.executable
-REG_NAME = "open_csv_utf8"
+REG_NAME = "utf8csv"
 ICON_PATH = "Excel.CSV\\DefaultIcon"
 USER_PATH = "Software\\Classes"
 SEARCH_PATHS = [(HKEY_CURRENT_USER, USER_PATH), (HKEY_LOCAL_MACHINE, "SOFTWARE\\Classes"), (HKEY_CLASSES_ROOT, "")]
@@ -62,13 +61,13 @@ class Opener:
         """Set this program as the default handler for CSV files"""
         if not self._run_as_script:
             # copy this program to %LOCALAPPDATA%\{REG_NAME}
-            from shutil import copy
+            from shutil import copy, SameFileError
 
             src = Path(self._program)
             dst = Path(os.getenv("LOCALAPPDATA")) / (REG_NAME + src.suffix)
             try:
                 copy(src, dst)
-            except shutil.SameFileError:
+            except SameFileError:
                 pass
             self._program = str(dst)
         logging.debug(f"Runner command: {self._command}")
@@ -287,10 +286,10 @@ def strip_bom(file: Path):
 
 def main() -> None:
     """Set up CLI arguments and options"""
-    log_file = Path(EXE).with_name("opencsv.log")
+    log_file = Path(EXE).with_name("utf8csv.log")
     logging.basicConfig(filename=log_file, encoding="utf-8", level=logging.WARNING)
     logging.debug(f"Call: {sys.argv}")
-    parser = ArgumentParser(epilog="Thank you for using OpenCSV!")
+    parser = ArgumentParser(epilog="Thank you for using utf8csv!")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("file", help="open this CSV file", type=Path, nargs="?")
     group.add_argument("-u", "--uninstall", help="remove CSV file association", action="store_true")

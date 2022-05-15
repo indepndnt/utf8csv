@@ -9,11 +9,11 @@ Select Python, click the "Always use this program" checkbox and "OK".
 ### Setup
 - Clone repository
 - Create virtual environment
-- `python -m pip install pytest black -e .`
+- `python -m pip install pytest black pyinstaller -e .`
 
 ### Format
 ```shell
-black -l 120 D:\PycharmProjects\openCSV
+black -l 120 project\utf8csv
 ```
 
 ### Test
@@ -23,35 +23,18 @@ pytest
 
 # Build
 
-### Compiling `eventlog.mc` into `eventlog.dll`
-
-First install Microsoft Visual Studio Community with the C++ and Windows SDK options.
-On my system, `mc.exe` and `rc.exe` are then found at
-`C:\Program Files (x86)\Windows Kits\10\bin\10.0.22000.0\x86\`, and `link.exe` is found at
-`C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\bin\HostX86\x86\`.
-
-In Visual Studio Community, go to `Tools > Command Line > Developer Command Prompt` to
-run these commands, they will be on the path.
-
+### Creating .exe file with PyInstaller
 ```shell
 # CD to project directory
-cd /project/openCSV
-# Compile messages file to .rc/.bin files
-mc.exe src/eventlog.mc
-# Compile those files to resource file
-rc.exe /r eventlog.rc
-# Link resource file to dll file
-link.exe -dll -noentry -out:src/eventlog.dll eventlog.res
-# remove intermediate files
-rm eventlog.* MSG*.bin
-```
-
-### Creating .exe file
-```shell
-# CD to project directory
-cd project\openCSV
+cd project\utf8csv
 # run PyInstaller
-pyinstaller.exe --onefile --noconfirm --ascii --windowed --name opencsv --add-binary "src\eventlog.dll;eventlog.dll" .\src\opencsv\main.py
+pyinstaller.exe --onefile --noconfirm --ascii --windowed --name utf8csv .\src\utf8csv\main.py
 # ... or ...
-pyinstaller.exe --onefile opencsv.spec
+pyinstaller.exe --onefile utf8csv.spec
 ```
+
+# Roadmap
+- update logging (maybe file rotate)
+- add simple tkinter windows for install/uninstall/options/(view logs)
+- options: import encoding default on/off
+- options: strip bom after close on/off

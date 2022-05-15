@@ -5,9 +5,9 @@ block_cipher = None
 
 
 a = Analysis(
-    ['src\\opencsv\\main.py'],
+    ['src\\utf8csv\\main.py'],
     pathex=[],
-    binaries=[('.\\src\\eventlog.dll', 'eventlog.dll')],
+    binaries=[],
     datas=[],
     hiddenimports=[],
     hookspath=[],
@@ -28,7 +28,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='opencsv',
+    name='utf8csv',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
