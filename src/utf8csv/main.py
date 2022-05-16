@@ -62,7 +62,7 @@ class Opener:
             return
         if currently != constants.REG_NAME:
             return
-        registry.unset_file_type()
+        # registry.unset_file_type()  # skip (see function docstring)
         registry.unset_prog_id()
         registry.unset_import_default_encoding()
 

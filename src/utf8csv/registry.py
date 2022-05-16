@@ -15,7 +15,7 @@ def get_value(key: str) -> str:
 
 
 def set_file_type() -> None:
-    # Record the association in the registry
+    """Record the association in the registry"""
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, f"{constants.USER_PATH}\\.csv") as k:
         winreg.SetValue(k, "", winreg.REG_SZ, constants.REG_NAME)
         winreg.SetValueEx(k, "Content Type", 0, winreg.REG_SZ, "application/vnd.ms-excel")
@@ -25,6 +25,16 @@ def set_file_type() -> None:
 
 
 def unset_file_type() -> None:
+    """Unset the .csv file association
+
+    Per Microsoft:
+      Leave the file type mappings unchanged at uninstall time. Doing so works because file type mappings are stored
+      per user in HKEY_CLASSES_ROOT\\.ext, and the system identifies the case where the ProgID value is missing and
+      ignores it. Leaving file type mappings unchanged avoids the need to have conditional code that only removes the
+      file type mapping if the value still points to your ProgID. It is important to avoid doing so in cases where it
+      might have been changed by another application and you thus cannot easily remove the value.
+    (Step 3 @ https://docs.microsoft.com/en-us/windows/win32/shell/how-to-register-a-file-type-for-a-new-application)
+    """
     keys = [
         f"{constants.USER_PATH}\\.csv\\OpenWithProgIds",
         f"{constants.USER_PATH}\\.csv",
@@ -38,9 +48,12 @@ def unset_file_type() -> None:
 
 
 def set_prog_id(open_command: str) -> None:
-    # Record command details in the registry
+    """Record command details in the registry"""
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, f"{constants.USER_PATH}\\{constants.REG_NAME}") as k:
-        winreg.SetValue(k, "", winreg.REG_SZ, "Open CSV files with UTF-8 encoding in Excel")
+        winreg.SetValue(k, "", winreg.REG_SZ, constants.TYPE_NAME)
+        # TODO: create a string table and make TYPE_NAME an indirect string reference (to facilitate multiple languages)
+        #       https://docs.microsoft.com/en-us/windows/win32/intl/using-registry-string-redirection
+        # winreg.SetValue(k, "FriendlyTypeName", winreg.REG_SZ, constants.TYPE_NAME)
         with winreg.CreateKey(k, "shell\\open\\command") as launch:
             winreg.SetValue(launch, "", winreg.REG_SZ, open_command)
         if icon_path := get_value(constants.ICON_PATH):

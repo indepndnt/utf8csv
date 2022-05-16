@@ -25,6 +25,7 @@ APPLICATION = "utf8csv"
 COMPONENT = "opener"
 VERSION = "1"
 REG_NAME = ".".join((APPLICATION, COMPONENT, VERSION))
+TYPE_NAME = "UTF-8 encoded CSV file"
 
 ICON_PATH = "Excel.CSV\\DefaultIcon"
 USER_PATH = "Software\\Classes"

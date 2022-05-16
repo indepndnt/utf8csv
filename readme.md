@@ -27,6 +27,10 @@ Not supported: Opening a CSV file from Excel > File > Open.
 After installation, if you use the legacy "import from text" function in Excel to import a CSV file, it will default 
 to UTF-8 encoding.
 
+# Uninstall
+
+Run `%LOCALAPPDATA%\utf8csv.exe -u` in the command window.
+
 # Development
 
 ### Setup
@@ -62,3 +66,4 @@ pyinstaller.exe --onefile utf8csv.spec
 - options: import encoding default on/off
 - options: strip bom after close on/off
 - create an icon
+- need some kind of confirmation after install/uninstall
