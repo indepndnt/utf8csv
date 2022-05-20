@@ -15,62 +15,14 @@ class Opener:
             self._program = f'{EXE[:-10]}pythonw.exe "{__file__}"'
             self._run_as_script = True
         else:
-            # If we exist as a PyInstaller one-file .EXE
+            # If we exist as a PyInstaller one-file .EXE or cx_Freeze installed .EXE
             self._program = EXE
             self._run_as_script = False
         self._xls_assoc = None
 
-    def __call__(self, file: Path | None, uninstall: bool, dry_run: bool = False) -> None:
-        if uninstall:
-            logging.debug("Uninstalling!")
-            self.uninstall(dry_run=dry_run)
-            return
-        if not file:
-            logging.debug("Installing!")
-            self.setup(dry_run=dry_run)
-            return
+    def __call__(self, file: Path | None, dry_run: bool = False) -> None:
         logging.debug(f"Opening {file}.")
         self.execute(file, dry_run=dry_run)
-
-    def setup(self, dry_run: bool) -> None:
-        """Set this program as the default handler for CSV files"""
-        if not self._run_as_script:
-            # copy this program to %LOCALAPPDATA%\{APPLICATION}
-            from shutil import copy, SameFileError
-
-            src = Path(self._program)
-            dst = Path(os.getenv("LOCALAPPDATA")) / (constants.APPLICATION + src.suffix)
-            try:
-                copy(src, dst)
-            except SameFileError:
-                pass
-            self._program = str(dst)
-        logging.debug(f"Runner command: {self._command}")
-        if dry_run:
-            print(f"DefaultIcon: '{registry.get_value(constants.ICON_PATH)}'")
-            return
-        registry.set_file_type()
-        registry.set_prog_id(self._command)
-        registry.set_import_default_encoding()
-        logging.debug(f"Installed to {self._program}.")
-
-    def uninstall(self, dry_run: bool) -> None:
-        """Remove this program as CSV file handler"""
-        currently = registry.get_value(".csv")
-        if dry_run:
-            print(f"Current: '{currently}'")
-            return
-        if currently != constants.REG_NAME:
-            return
-        # registry.unset_file_type()  # skip (see function docstring)
-        registry.unset_prog_id()
-        registry.unset_import_default_encoding()
-
-        # delete this program from %LOCALAPPDATA%\{APPLICATION}
-        local_path = os.getenv("LOCALAPPDATA")
-        if not self._run_as_script and self._program.startswith(local_path):
-            Path(self._program).unlink(missing_ok=True)
-        logging.debug("Uninstalled.")
 
     @property
     def _command(self):
@@ -101,16 +53,14 @@ class Opener:
 
 def main() -> None:
     """Set up CLI arguments and options"""
-    log_file = Path(EXE).with_name(f"{constants.APPLICATION}.log")
-    logging.basicConfig(filename=log_file, encoding="utf-8", level=logging.WARNING)
+    log_file = Path(os.getenv("LOCALAPPDATA")) / "utf8csv.log"
+    logging.basicConfig(filename=log_file, encoding="utf-8", level=logging.DEBUG)
     logging.debug(f"Call: {sys.argv}")
     parser = ArgumentParser(epilog="Thank you for using utf8csv!")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("file", help="open this CSV file", type=Path, nargs="?")
-    group.add_argument("-u", "--uninstall", help="remove CSV file association", action="store_true")
+    parser.add_argument("file", help="open this CSV file", type=Path, nargs="?")
     args = parser.parse_args()
     opener = Opener()
-    opener(args.file, args.uninstall)
+    opener(args.file)
 
 
 if __name__ == "__main__":
