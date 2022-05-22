@@ -20,13 +20,5 @@ OTHER_BOMS_4C = {
     b"\xdd\x73\x66\x73",  # UTF-EBCDIC
     b"\x84\x31\x95\x33",  # GB-18030
 }
-
-APPLICATION = "utf8csv"
-COMPONENT = "opener"
-VERSION = "1"
-REG_NAME = ".".join((APPLICATION, COMPONENT, VERSION))
-TYPE_NAME = "UTF-8 encoded CSV file"
-
-ICON_PATH = "Excel.CSV\\DefaultIcon"
 USER_PATH = "Software\\Classes"
 SEARCH_PATHS = [(HKEY_CURRENT_USER, USER_PATH), (HKEY_LOCAL_MACHINE, "SOFTWARE\\Classes"), (HKEY_CLASSES_ROOT, "")]
