@@ -16,8 +16,9 @@ Open a CSV file from within Windows Explorer.
 
 Not supported: Opening a CSV file from Excel > File > Open.
 
-After installation, if you use the legacy "import from text" function in Excel to import a CSV file, it will default 
-to UTF-8 encoding.
+~~After installation, if you use the legacy "import from text" function in Excel to import a CSV file, it will default 
+to UTF-8 encoding.~~ (Note: I broke this with the MSI installer, but intend to add it back as an option toggleable in 
+the upcoming UI)
 
 # Uninstall
 
@@ -41,6 +42,8 @@ pytest
 ```
 
 # Build
+
+- set version in `info.py`
 
 ### Creating Windows installer with cx_Freeze
 ```shell

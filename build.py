@@ -1,11 +1,15 @@
 import distutils.command.bdist_msi
 import msilib
 import os
+from pathlib import Path
+import sys
 import sysconfig
 from cx_Freeze import setup, Executable
 from cx_Freeze.windist import bdist_msi as cx_bdist_msi
+sys.path.append(str(Path(__file__).parent))
+from info import version, msi_version, package_name, author, author_email, url, description, download_url, requires
 
-executable = Executable("src/utf8csv/main.py", base="Win32GUI", icon="media/utf8csv.ico", target_name="utf8csv",)
+executable = Executable("src/utf8csv/main.py", base="Win32GUI", icon="media/utf8csv.ico", target_name=package_name)
 
 
 # In figuring out how to get this to create the installer the way I wanted, I discovered the following
@@ -16,12 +20,8 @@ executable = Executable("src/utf8csv/main.py", base="Win32GUI", icon="media/utf8
 
 class bdist_msi(cx_bdist_msi):
     def add_properties(self):
-        metadata = self.distribution.metadata
-        # strip the "20" off version number to fit MSI version number constraints:
-        #   {major max:255}.{minor max:255}.{build max:65535}
-        version = metadata.get_version()[2:]
         props = [
-            ("DistVersion", version),
+            ("DistVersion", msi_version),
             ("DefaultUIFont", "DlgFont8"),
             ("ErrorDialog", "ErrorDlg"),
             ("Progress1", "Install"),
@@ -29,7 +29,8 @@ class bdist_msi(cx_bdist_msi):
             ("MaintenanceForm_Action", "Repair"),
             ("ALLUSERS", "2"),
             ("MSIINSTALLPERUSER", "1"),
-            ("ARPCONTACT", metadata.author_email),
+            ("ARPCONTACT", author_email),
+            ("ARPURLINFOABOUT", url),
             ("UpgradeCode", "{30290B55-DDFC-4C4D-BDF9-FCE3FC9098CF}"),
             ("ARPPRODUCTICON", "Utf8csvIcon"),
         ]
@@ -38,20 +39,11 @@ class bdist_msi(cx_bdist_msi):
 
     def finalize_options(self):
         distutils.command.bdist_msi.bdist_msi.finalize_options(self)
-        name = self.distribution.get_name()
-        fullname = self.distribution.get_fullname()
         platform = sysconfig.get_platform().replace("win-amd64", "win64")
         program_files_folder = "ProgramFiles64Folder" if "64" in platform else "ProgramFilesFolder"
-        # strip the "20" off version number to fit MSI version number constraints:
-        #   {major max:255}.{minor max:255}.{build max:65535}
-        version = self.distribution.get_version()[2:]
-        self.initial_target_dir = fr"[{program_files_folder}]\{name}"
+        self.initial_target_dir = fr"[{program_files_folder}]\{package_name}"
         self.add_to_path = False
-        if not fullname.lower().endswith(".msi"):
-            fullname = f"{fullname}-{platform}.msi"
-        if not os.path.isabs(fullname):
-            fullname = os.path.join(self.dist_dir, fullname)
-        self.target_name = fullname
+        self.target_name = os.path.join(self.dist_dir, f"{package_name}-{msi_version}-{platform}.msi")
         self.directories = []
         self.environment_variables = []
         self.data = {}
@@ -60,30 +52,34 @@ class bdist_msi(cx_bdist_msi):
         for idx, executable in enumerate(self.distribution.executables):
             base_name = os.path.basename(executable.target_name)
             self.separate_components[base_name] = msilib.make_id(f"install_{idx}_{executable}")
-        executable = "utf8csv.exe"
+        executable = f"{package_name}.exe"
         component = self.separate_components[executable]
-        progid = msilib.make_id(f"{os.path.splitext(executable)[0]}.{version}")
+        progid = msilib.make_id(f"{os.path.splitext(executable)[0]}.{msi_version}")
         self._append_to_data("ProgId", progid, None, None, self.distribution.get_description(), "Utf8csvIcon", None)
         self._append_to_data("Extension", "csv", component, progid, "text/csv", "default")
         self._append_to_data("Verb", "csv", "open", 0, "Open with utf8csv and Excel", '"%1"')
-        # todo: pr to change "None" to "" in windist.py 873? ICE03 error: invalid guid string
+        # change "None" to "" in windist.py 873: Orca validation message "ICE03 error: invalid guid string"
         self._append_to_data("MIME", "text/csv", "csv", "")
         # Registry entries that allow proper display of the app in menu
-        # todo: pr to change - to _ in windist.py 877-895? ICE03 error: invalid identifier
-        self._append_to_data("Registry", f"{progid}_name", -1, fr"Software\Classes\{progid}", "FriendlyAppName", name, component)
-        self._append_to_data("Registry", f"{progid}_verb_open", -1, fr"Software\Classes\{progid}\shell\open", "FriendlyAppName", name, component)
-        self._append_to_data("Registry", f"{progid}_author", -1, fr"Software\Classes\{progid}\Application", "ApplicationCompany", self.distribution.get_author(), component)
+        # change "-" to "_" in windist.py 877-895: Orca validation message "ICE03 error: invalid identifier"
+        self._append_to_data("Registry", f"{progid}_name", -1, fr"Software\Classes\{progid}", "FriendlyAppName", package_name, component)
+        self._append_to_data("Registry", f"{progid}_verb_open", -1, fr"Software\Classes\{progid}\shell\open", "FriendlyAppName", package_name, component)
+        self._append_to_data("Registry", f"{progid}_author", -1, fr"Software\Classes\{progid}\Application", "ApplicationCompany", "Open Source", component)
 
 
 setup(
-    name="utf8csv",
-    version="2022.05.20",
-    description="Open CSV files in Excel with UTF-8 encoding",
-    author="Joe Carey",
-    author_email="joecarey001@gmail.com",
-    packages=["utf8csv"],
+    name=package_name,
+    version=version,
+    author=author,
+    author_email=author_email,
+    url=url,
+    license=Path(__file__).with_name("LICENSE").read_text(),
+    description=description,
+    download_url=download_url,
+    packages=[package_name],
     package_dir={"": "src"},
-    install_requires=["pywin32==304"],
+    install_requires=requires,
+    python_requires=">=3.9",
     cmdclass={"bdist_msi": bdist_msi},
     options={"build_exe": {"include_msvcr": True}},
     executables=[executable],
