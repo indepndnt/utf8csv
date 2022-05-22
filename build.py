@@ -6,6 +6,7 @@ import sys
 import sysconfig
 from cx_Freeze import setup, Executable
 from cx_Freeze.windist import bdist_msi as cx_bdist_msi
+
 sys.path.append(str(Path(__file__).parent))
 from info import version, msi_version, package_name, author, author_email, url, description, download_url, requires
 
@@ -17,6 +18,7 @@ executable = Executable("src/utf8csv/main.py", base="Win32GUI", icon="media/utf8
 # - Orca (from Microsoft's [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/))
 #   for modifying MSI files
 # - [MSI reference](https://docs.microsoft.com/en-us/windows/win32/msi/installer-database)
+
 
 class bdist_msi(cx_bdist_msi):
     def add_properties(self):
@@ -41,7 +43,7 @@ class bdist_msi(cx_bdist_msi):
         distutils.command.bdist_msi.bdist_msi.finalize_options(self)
         platform = sysconfig.get_platform().replace("win-amd64", "win64")
         program_files_folder = "ProgramFiles64Folder" if "64" in platform else "ProgramFilesFolder"
-        self.initial_target_dir = fr"[{program_files_folder}]\{package_name}"
+        self.initial_target_dir = rf"[{program_files_folder}]\{package_name}"
         self.add_to_path = False
         self.target_name = os.path.join(self.dist_dir, f"{package_name}-{msi_version}-{platform}.msi")
         self.directories = []
@@ -62,9 +64,33 @@ class bdist_msi(cx_bdist_msi):
         self._append_to_data("MIME", "text/csv", "csv", "")
         # Registry entries that allow proper display of the app in menu
         # change "-" to "_" in windist.py 877-895: Orca validation message "ICE03 error: invalid identifier"
-        self._append_to_data("Registry", f"{progid}_name", -1, fr"Software\Classes\{progid}", "FriendlyAppName", package_name, component)
-        self._append_to_data("Registry", f"{progid}_verb_open", -1, fr"Software\Classes\{progid}\shell\open", "FriendlyAppName", package_name, component)
-        self._append_to_data("Registry", f"{progid}_author", -1, fr"Software\Classes\{progid}\Application", "ApplicationCompany", "Open Source", component)
+        self._append_to_data(
+            "Registry",
+            f"{progid}_name",
+            -1,
+            rf"Software\Classes\{progid}",
+            "FriendlyAppName",
+            package_name,
+            component,
+        )
+        self._append_to_data(
+            "Registry",
+            f"{progid}_verb_open",
+            -1,
+            rf"Software\Classes\{progid}\shell\open",
+            "FriendlyAppName",
+            package_name,
+            component,
+        )
+        self._append_to_data(
+            "Registry",
+            f"{progid}_author",
+            -1,
+            rf"Software\Classes\{progid}\Application",
+            "ApplicationCompany",
+            "Open Source",
+            component,
+        )
 
 
 setup(

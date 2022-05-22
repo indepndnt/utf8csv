@@ -54,7 +54,6 @@ python build.py bdist_msi
 ```
 
 # Roadmap
-- update logging (maybe file rotate)
 - add simple tkinter windows for options/(view logs)
 - options: import encoding default on/off
 - options: strip bom after close on/off

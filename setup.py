@@ -1,6 +1,7 @@
 from pathlib import Path
 from setuptools import setup
 import sys
+
 sys.path.append(str(Path(__file__).parent))
 from info import package_name, version, author, author_email, url, description, requires
 

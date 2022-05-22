@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import os
 from pathlib import Path
 import sys
@@ -55,8 +56,11 @@ class Opener:
 def main() -> int:
     """Set up CLI arguments and options"""
     log_file = Path(os.getenv("LOCALAPPDATA")) / "utf8csv.log"
-    logging.basicConfig(filename=log_file, encoding="utf-8", level=logging.DEBUG)
+    handler = TimedRotatingFileHandler(filename=log_file, when="w6", backupCount=4, delay=True)
+    log_format = "[%(asctime)s] [%(name)s.pid%(process)d] %(levelname)s: %(message)s"
+    logging.basicConfig(handlers=[handler], format=log_format, level=logging.DEBUG)
     logging.debug(f"Call: {sys.argv}")
+
     parser = ArgumentParser(epilog="Thank you for using utf8csv!")
     parser.add_argument("file", help="open this CSV file", type=Path, nargs="?")
     args = parser.parse_args()

@@ -6,7 +6,7 @@ package_name = "utf8csv"
 msi_version = version[2:]
 author = "Joe Carey"
 author_email = "joecarey001@gmail.com"
-url = "https://github.com/indepndnt/utf8csv",
-description = "Open CSV files in Excel with UTF-8 encoding",
+url = "https://github.com/indepndnt/utf8csv"
+description = "Open CSV files in Excel with UTF-8 encoding"
 download_url = "https://github.com/indepndnt/utf8csv/releases/"
 requires = ["pywin32==304"]

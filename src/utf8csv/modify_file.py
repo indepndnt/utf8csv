@@ -8,7 +8,14 @@ from utf8csv import constants
 def prepend(file: Path) -> None:
     """Write source to destination with UTF-8 byte order mark prepended"""
     stub = file.open("rb").read(6)
-    if any((stub[:3] == constants.BOM, stub[:4] in constants.OTHER_BOMS_4C, stub[:3] in constants.OTHER_BOMS_3C, stub[:2] in constants.OTHER_BOMS_2C)):
+    if any(
+        (
+            stub[:3] == constants.BOM,
+            stub[:4] in constants.OTHER_BOMS_4C,
+            stub[:3] in constants.OTHER_BOMS_3C,
+            stub[:2] in constants.OTHER_BOMS_2C,
+        )
+    ):
         # Our source file already has a byte order mark!
         return
     original_stat = file.stat()
@@ -47,7 +54,7 @@ def strip_bom(file: Path):
         time.sleep(2)
     # see if the file has a BOM to strip off
     if file.open("rb").read(3) != constants.BOM:
-        logging.debug(f"No BOM found on {file}")
+        logging.debug(f"No UTF-8 BOM found on {file}")
         return
     # rewrite the file without the BOM
     original_stat = file.stat()
