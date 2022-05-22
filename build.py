@@ -10,8 +10,19 @@ from cx_Freeze.windist import bdist_msi as cx_bdist_msi
 sys.path.append(str(Path(__file__).parent))
 from info import version, msi_version, package_name, author, author_email, url, description, download_url, requires
 
-executable = Executable("src/utf8csv/main.py", base="Win32GUI", icon="media/utf8csv.ico", target_name=package_name)
-
+executable = Executable(
+    "src/utf8csv/main.py",
+    base="Win32GUI",
+    icon="media/utf8csv.ico",
+    target_name=package_name,
+    shortcut_name="Utf8csv",
+    shortcut_dir="StartMenuFolder",
+)
+build_exe_options = {
+    "include_msvcr": True,
+    "excludes": ["asyncio", "email", "html", "http", "pydoc_data", "unittest"],
+    "include_files": ["media/utf8csv.ico"],
+}
 
 # In figuring out how to get this to create the installer the way I wanted, I discovered the following
 # Microsoft resources:
@@ -107,6 +118,6 @@ setup(
     install_requires=requires,
     python_requires=">=3.9",
     cmdclass={"bdist_msi": bdist_msi},
-    options={"build_exe": {"include_msvcr": True}},
+    options={"build_exe": build_exe_options},
     executables=[executable],
 )

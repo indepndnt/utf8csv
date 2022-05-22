@@ -2,7 +2,14 @@
 
 Go to "Releases" and download the utf8csv.msi file from the latest release and run it.
 
+On the first run, Windows may ask you to confirm the file association. Select "utf8csv" and check "Always use this 
+app to open .csv files".
+
+![How do you want to open this file? Dialog](media/how-do-you-want-to-open-this-file.png)
+
 # Usage
+
+## Loading CSVs
 
 Open a CSV file from within Windows Explorer.
 
@@ -14,15 +21,26 @@ Open a CSV file from within Windows Explorer.
 > After Excel releases the file, the program will strip the BOM from the CSV file (as other programs may have issues 
 > with the weird extra characters).
 
+## Options
+
+Run "Utf8csv" from your start menu to change options and view runtime logs.
+
+![Start Menu Entry](media/start-menu-entry.png)
+
+![Application Window](media/application-window.png)
+
+## Importing CSVs within Excel
+
 Not supported: Opening a CSV file from Excel > File > Open.
 
-~~After installation, if you use the legacy "import from text" function in Excel to import a CSV file, it will default 
-to UTF-8 encoding.~~ (Note: I broke this with the MSI installer, but intend to add it back as an option toggleable in 
-the upcoming UI)
+After installation, if you use the legacy "import from text" function in Excel to import a CSV file, it will default 
+to UTF-8 encoding.
 
 # Uninstall
 
 Uninstall "utf8csv" Windows' "Add or remove programs".
+
+---
 
 # Development
 
@@ -41,9 +59,9 @@ black -l 120 project\utf8csv
 pytest
 ```
 
-# Build
+## Build
 
-- set version in `info.py`
+- set version in `src/utf8csv/version.py`
 
 ### Creating Windows installer with cx_Freeze
 ```shell
@@ -53,7 +71,4 @@ cd project\utf8csv
 python build.py bdist_msi
 ```
 
-# Roadmap
-- add simple tkinter windows for options/(view logs)
-- options: import encoding default on/off
-- options: strip bom after close on/off
+The output will be a file named like `utf8csv-22.05.22-win64.msi` in a new folder named `dist`.

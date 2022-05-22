@@ -1,6 +1,6 @@
 import logging
 import winreg
-from utf8csv import constants
+from utf8csv import constants, language
 
 
 def get_value(key: str) -> str:
@@ -14,6 +14,17 @@ def get_value(key: str) -> str:
     return ""
 
 
+def is_set_import_default_encoding() -> bool:
+    try:
+        if key := excel_options_key():
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key) as k:
+                value = winreg.QueryValueEx(k, "DefaultCPG")[0]
+                return value == 65001
+    except FileNotFoundError:
+        pass
+    return False
+
+
 def set_import_default_encoding() -> None:
     if sub_key := excel_options_key():
         with winreg.CreateKey(winreg.HKEY_CURRENT_USER, sub_key) as k:
@@ -23,11 +34,11 @@ def set_import_default_encoding() -> None:
 def unset_import_default_encoding() -> None:
     try:
         if key := excel_options_key():
-            logging.debug(f"Deleting HKCU\\{key}\\DefaultCPG")
+            logging.debug(language.text(language.LOG_DELETING, key))
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key, 0, winreg.KEY_ALL_ACCESS) as k:
                 winreg.DeleteValue(k, "DefaultCPG")
     except FileNotFoundError:
-        logging.debug(f"Registry value DefaultCPG not found, skipping.")
+        logging.debug(language.text(language.LOG_CPG_NOT_FOUND))
 
 
 def get_open_association(suffix: str) -> str:
@@ -36,7 +47,7 @@ def get_open_association(suffix: str) -> str:
     key = f"{assoc_name}\\shell\\open\\command"
     assoc_command = get_value(key)
     if not assoc_command:
-        raise OSError(f"Could not find file association for {suffix}!")
+        raise OSError(language.text(language.ERR_NO_ASSOC, suffix))
     elif assoc_command[0] == '"':
         end = assoc_command.find('"', 1)
         return assoc_command[1:end]

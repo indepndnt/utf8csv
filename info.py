@@ -1,4 +1,4 @@
-version = "2020.05.22"
+version = "2022.05.22"
 
 package_name = "utf8csv"
 # strip the "20" off version number to fit MSI version number constraints:

@@ -1,72 +1,38 @@
-from argparse import ArgumentParser
 import logging
-from logging.handlers import TimedRotatingFileHandler
-import os
 from pathlib import Path
 import sys
-from utf8csv import excel, modify_file, registry
-
-EXE = sys.executable
+from utf8csv import excel, language, logs, window
 
 
-class Opener:
-    def __init__(self):
-        if EXE.endswith("python.exe"):
-            # If we exist as a python script run by a Python executable
-            self._program = f'{EXE[:-10]}pythonw.exe "{__file__}"'
-            self._run_as_script = True
-        else:
-            # If we exist as a PyInstaller one-file .EXE or cx_Freeze installed .EXE
-            self._program = EXE
-            self._run_as_script = False
-        self._xls_assoc = None
+def _file(file: Path, dry_run: bool = False) -> int:
+    try:
+        return excel.open_csv(file, dry_run)
+    except Exception:
+        logging.exception(language.text(language.ERR_CSV_CATCH))
+        raise
 
-    def __call__(self, file: Path | None, dry_run: bool = False) -> int:
-        logging.debug(f"Opening {file}.")
-        return self.execute(file, dry_run=dry_run)
 
-    @property
-    def _command(self):
-        return f'{self._program} "%1"'
-
-    @property
-    def excel_association(self) -> str:
-        """Find the command associated with Excel files since we've overridden the CSV association"""
-        if self._xls_assoc is None:
-            self._xls_assoc = registry.get_open_association(".xlsx")
-            logging.debug(f"Identified Excel association command as {self._xls_assoc}.")
-        return self._xls_assoc
-
-    def execute(self, file: Path, dry_run: bool = False) -> int:
-        """Confirm that arguments are CSV files that exist, then open them"""
-        if not file.is_file():
-            logging.debug(f"{file} is not a file.")
-            return 1
-        if file.suffix.lower() != ".csv":
-            logging.debug(f"{file} is not a CSV file.")
-            return 2
-        # Rewrite the file starting with the UTF-8 Byte Order Mark
-        modify_file.prepend(file)
-        if not dry_run:
-            # Open the CSV with Excel
-            excel.launch(self.excel_association, file)
-        return 0
+def _gui() -> int:
+    try:
+        return window.load_gui()
+    except Exception:
+        logging.exception(language.text(language.ERR_GUI_CATCH))
+        raise
 
 
 def main() -> int:
-    """Set up CLI arguments and options"""
-    log_file = Path(os.getenv("LOCALAPPDATA")) / "utf8csv.log"
-    handler = TimedRotatingFileHandler(filename=log_file, when="w6", backupCount=4, delay=True)
-    log_format = "[%(asctime)s] [%(name)s.pid%(process)d] %(levelname)s: %(message)s"
-    logging.basicConfig(handlers=[handler], format=log_format, level=logging.DEBUG)
+    """Set up logging and parse CLI arguments"""
+    logs.setup()
     logging.debug(f"Call: {sys.argv}")
 
-    parser = ArgumentParser(epilog="Thank you for using utf8csv!")
-    parser.add_argument("file", help="open this CSV file", type=Path, nargs="?")
-    args = parser.parse_args()
-    opener = Opener()
-    return opener(args.file)
+    # command line
+    if len(sys.argv) < 2 or not sys.argv[1]:
+        # launch gui
+        return _gui()
+
+    # open the file
+    return _file(Path(sys.argv[1]))
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())
