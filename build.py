@@ -8,15 +8,13 @@ from cx_Freeze import setup, Executable
 from cx_Freeze.windist import bdist_msi as cx_bdist_msi
 
 sys.path.append(str(Path(__file__).parent))
-from info import version, msi_version, package_name, author, author_email, url, description, download_url, requires
+from info import msi_version, msi_code, package_name, author, author_email, url, description, download_url, requires
 
 executable = Executable(
     "src/utf8csv/main.py",
     base="Win32GUI",
     icon="media/utf8csv.ico",
     target_name=package_name,
-    shortcut_name="Utf8csv",
-    shortcut_dir="StartMenuFolder",
 )
 build_exe_options = {
     "include_msvcr": True,
@@ -44,11 +42,61 @@ class bdist_msi(cx_bdist_msi):
             ("MSIINSTALLPERUSER", "1"),
             ("ARPCONTACT", author_email),
             ("ARPURLINFOABOUT", url),
-            ("UpgradeCode", "{30290B55-DDFC-4C4D-BDF9-FCE3FC9098CF}"),
+            ("UpgradeCode", msi_code),
             ("ARPPRODUCTICON", "Utf8csvIcon"),
         ]
         msilib.add_data(self.db, "Property", props)
         msilib.add_data(self.db, "Icon", [("Utf8csvIcon", msilib.Binary("media/utf8csv.ico"))])
+
+    def add_config(self, fullname):
+        msilib.add_data(
+            self.db,
+            "Property",
+            [("SecureCustomProperties", "TARGETDIR;REINSTALLMODE;REMOVEOLDVERSION;REMOVENEWVERSION")],
+        )
+        msilib.add_data(
+            self.db,
+            "CustomAction",
+            [
+                ("A_SET_TARGET_DIR", 256 + 51, "TARGETDIR", self.initial_target_dir),
+                ("A_SET_REINSTALL_MODE", 256 + 51, "REINSTALLMODE", "amus"),
+            ],
+        )
+        msilib.add_data(
+            self.db,
+            "InstallExecuteSequence",
+            [
+                ("A_SET_TARGET_DIR", 'TARGETDIR=""', 401),
+                ("A_SET_REINSTALL_MODE", 'REINSTALLMODE=""', 402),
+            ],
+        )
+        msilib.add_data(
+            self.db,
+            "InstallUISequence",
+            [
+                ("PrepareDlg", None, 140),
+                ("A_SET_TARGET_DIR", 'TARGETDIR=""', 401),
+                ("A_SET_REINSTALL_MODE", 'REINSTALLMODE=""', 402),
+                ("SelectDirectoryDlg", "not Installed", 1230),
+                ("MaintenanceTypeDlg", "Installed and not Resume and not Preselected", 1250),
+                ("ProgressDlg", None, 1280),
+            ],
+        )
+        for table_name, data in self.data.items():
+            col = self._binary_columns.get(table_name)
+            if col is not None:
+                data = [(*row[:col], msilib.Binary(row[col]), *row[col + 1 :]) for row in data]
+            msilib.add_data(self.db, table_name, data)
+
+    def add_upgrade_config(self, sversion):
+        msilib.add_data(
+            self.db,
+            "Upgrade",
+            [
+                (msi_code, None, msi_version, None, 513, None, "REMOVEOLDVERSION"),
+                (msi_code, "2020.0.0", "2022.12.31", None, 769, None, "REMOVENEWVERSION"),
+            ],
+        )
 
     def finalize_options(self):
         distutils.command.bdist_msi.bdist_msi.finalize_options(self)
@@ -57,24 +105,39 @@ class bdist_msi(cx_bdist_msi):
         self.initial_target_dir = rf"[{program_files_folder}]\{package_name}"
         self.add_to_path = False
         self.target_name = os.path.join(self.dist_dir, f"{package_name}-{msi_version}-{platform}.msi")
-        self.directories = []
-        self.environment_variables = []
         self.data = {}
-        self.summary_data = {}
         self.separate_components = {}
-        for idx, executable in enumerate(self.distribution.executables):
-            base_name = os.path.basename(executable.target_name)
-            self.separate_components[base_name] = msilib.make_id(f"install_{idx}_{executable}")
-        executable = f"{package_name}.exe"
-        component = self.separate_components[executable]
-        progid = msilib.make_id(f"{os.path.splitext(executable)[0]}.{msi_version}")
+        for idx, exe in enumerate(self.distribution.executables):
+            base_name = os.path.basename(exe.target_name)
+            self.separate_components[base_name] = msilib.make_id(f"i{idx}{exe.target_name}")
+        exe = f"{package_name}.exe"
+        component = self.separate_components[exe]
+        progid = msilib.make_id(f"{os.path.splitext(exe)[0]}.{msi_version}")
         self._append_to_data("ProgId", progid, None, None, self.distribution.get_description(), "Utf8csvIcon", None)
         self._append_to_data("Extension", "csv", component, progid, "text/csv", "default")
         self._append_to_data("Verb", "csv", "open", 0, "Open with utf8csv and Excel", '"%1"')
-        # change "None" to "" in windist.py 873: Orca validation message "ICE03 error: invalid guid string"
+        # change "None" to "" (from windist.py 873): Orca validation message "ICE03 error: invalid guid string"
         self._append_to_data("MIME", "text/csv", "csv", "")
+        # Attempt to add Start Menu program item correctly
+        self._append_to_data("Directory", "ProgramMenuFolder", "TARGETDIR", ".")
+        self._append_to_data(
+            "Shortcut",
+            "S_APP_0",
+            "ProgramMenuFolder",
+            package_name,
+            "TARGETDIR",  # component,
+            f"[TARGETDIR]{exe}",  # "default",
+            None,
+            "Configure Utf8csv",
+            None,
+            "Utf8csvIcon",
+            0,
+            1,
+            "TARGETDIR",
+        )
+
         # Registry entries that allow proper display of the app in menu
-        # change "-" to "_" in windist.py 877-895: Orca validation message "ICE03 error: invalid identifier"
+        # change "-" to "_" (from windist.py 877-895): Orca validation message "ICE03 error: invalid identifier"
         self._append_to_data(
             "Registry",
             f"{progid}_name",
@@ -106,7 +169,7 @@ class bdist_msi(cx_bdist_msi):
 
 setup(
     name=package_name,
-    version=version,
+    version=msi_version,
     author=author,
     author_email=author_email,
     url=url,
